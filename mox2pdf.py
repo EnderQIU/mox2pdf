@@ -9,6 +9,7 @@ from pyrsistent import optional
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
+from tqdm import tqdm
 
 
 MOX2PDF_TEMP_DIR = '.mox2pdf'
@@ -72,7 +73,8 @@ def generate_pdf(pdf_path, image_paths):
     test_pdf = canvas.Canvas('temp.pdf')
     pdf = canvas.Canvas(pdf_path)
     a4_ratio = A4[0] / A4[1]
-    for image_path in image_paths:
+    count = 0
+    for image_path in tqdm(image_paths):
         width, height = test_pdf.drawImage(image_path, 0, 0)
         ratio = width / height
         if ratio > a4_ratio:
@@ -80,6 +82,7 @@ def generate_pdf(pdf_path, image_paths):
         else:
             pdf.drawImage(image_path, 0, 0, height=A4[1], anchor='sw', preserveAspectRatio=True)
         pdf.showPage()
+        count += 1
     pdf.save()
 
 
