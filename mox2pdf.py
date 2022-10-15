@@ -10,11 +10,12 @@ from pyrsistent import optional
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 
+
 MOX2PDF_TEMP_DIR = '.mox2pdf'
 
 
-def extract_epub(file_path):
-    with zipfile.ZipFile(file_path, 'r') as archive:
+def extract_epub(epub_path):
+    with zipfile.ZipFile(epub_path, 'r') as archive:
         archive.extractall(path=os.path.join(os.getcwd(), MOX2PDF_TEMP_DIR))
 
 
@@ -27,7 +28,7 @@ def get_image_path(html_path):
         return image_path.group()
 
 
-def get_image_paths(cwd):
+def get_image_paths():
     temp_dir = os.path.join(os.getcwd(), MOX2PDF_TEMP_DIR)
     html_dir = os.path.join(temp_dir, 'html')
     image_dir = os.path.join(temp_dir, 'image')
@@ -63,15 +64,15 @@ def generate_pdf(pdf_path, image_paths):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Convert EPub comics downloaded from mox.moe to PDF format.')
-    parser.add_argument('file_path', type=str, help='Pathes to the EPub file.')
-    parser.add_argument('-p', '--preserve', action='store_true', help='Preserve temp directories not be cleaned.')
+    parser = argparse.ArgumentParser(description='Convert EPub comics downloaded from mox.moe to PDF A4 format.')
+    parser.add_argument('epub_path', type=str, help='Path to the EPub file.')
+    parser.add_argument('-p', '--preserve', action='store_true', help='Preserve the {} not to be removed.'.format(MOX2PDF_TEMP_DIR))
     parser.add_argument('-o', '--output', type=str, required=False, help='The output PDF file name.')
     args = parser.parse_args()
 
-    extract_epub(args.file_path)
-    image_paths = get_image_paths(args.file_path)
+    extract_epub(args.epub_path)
+    image_paths = get_image_paths(args.epub_path)
 
-    generate_pdf(args.output if args.output else os.path.split(os.path.splitext(args.file_path)[0] + '.pdf')[1], image_paths)
+    generate_pdf(args.output if args.output else os.path.split(os.path.splitext(args.epub_path)[0] + '.pdf')[1], image_paths)
     if not args.preserve:
         shutil.rmtree(os.path.join(os.getcwd(), MOX2PDF_TEMP_DIR))
