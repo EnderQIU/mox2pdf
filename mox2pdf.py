@@ -5,7 +5,6 @@ import argparse
 import glob
 import shutil
 import zipfile
-from pyrsistent import optional
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -69,7 +68,7 @@ def get_image_paths():
     return image_paths
 
 
-def generate_pdf(pdf_path, image_paths):
+def generate_pdf(pdf_path, image_paths, title, creator, series):
     test_pdf = canvas.Canvas('temp.pdf')
     pdf = canvas.Canvas(pdf_path)
     a4_ratio = A4[0] / A4[1]
@@ -83,7 +82,43 @@ def generate_pdf(pdf_path, image_paths):
             pdf.drawImage(image_path, 0, 0, height=A4[1], anchor='sw', preserveAspectRatio=True)
         pdf.showPage()
         count += 1
+    
+    pdf.setTitle(title)
+    pdf.setAuthor(creator)
+    pdf.setSubject(series)
+    print('Saving PDF file...')
     pdf.save()
+
+
+def get_meta_data():
+    temp_dir = os.path.join(os.getcwd(), MOX2PDF_TEMP_DIR)
+    vol_opf_path = os.path.join(temp_dir, 'vol.opf')
+    with open(vol_opf_path, 'rb') as html:
+        content = html.read().decode('utf-8')
+        title = re.search(r'<dc:title>(.*)</dc:title>', content, re.MULTILINE)
+        if title is None:
+            title = 'Unknown title'
+            print('Cannot get title from vol.opf.')
+        else:
+            title = title.groups(0)[0]
+        print('Title:', title)
+
+        creator = re.search(r'<dc:creator>(.*)</dc:creator>', content, re.MULTILINE)
+        if creator is None:
+            creator = 'Unknown creator'
+            print('Cannot get creator from vol.opf.')
+        else:
+            creator = creator.groups(0)[0]
+        print('Creator:', creator)
+
+        series = re.search(r'<dc:series>(.*)</dc:series>', content, re.MULTILINE)
+        if series is None:
+            series = 'Unknown series'
+            print('Cannot get series from vol.opf.')
+        else:
+            series = series.groups(0)[0]
+        print('Series:', series)
+        return title, creator, series
 
 
 if __name__ == '__main__':
@@ -95,12 +130,17 @@ if __name__ == '__main__':
 
     print('Extracting epub file:', args.epub_path)
     extract_epub(args.epub_path)
+
     print('Indexing images...')
     image_paths = get_image_paths()
 
+    print('Scanning metadata...')
+    title, creator, series = get_meta_data()
+
     pdf_file_name = args.output if args.output else os.path.split(os.path.splitext(args.epub_path)[0] + '.pdf')[1]
     print('Generating PDF:', pdf_file_name)
-    generate_pdf(pdf_file_name, image_paths)
+    generate_pdf(pdf_file_name, image_paths, title, creator, series)
+
     if not args.preserve:
         print('Cleaning workspace...')
         shutil.rmtree(os.path.join(os.getcwd(), MOX2PDF_TEMP_DIR))
