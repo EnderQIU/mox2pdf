@@ -28,6 +28,23 @@ def get_image_path(html_path):
         return image_path.group()
 
 
+def get_image_paths_by_opf(temp_dir, html_dir, image_dir, image_paths):
+    with open(os.path.join(temp_dir, 'vol.opf'), 'rb') as opf:
+        content = opf.read().decode('utf-8')
+        html_files = re.finditer(r'page-[0-9]{6}\.html', content, re.MULTILINE)
+        if html_files is None:
+            raise Exception("Cannot find any pages from vol.opf")
+        print(html_files)
+        for html_file in html_files:
+            with open(os.path.join(html_dir, html_file.group()), 'rb') as html:
+                content = html.read().decode('utf-8')
+                image_path = re.search(r'moe-[0-9]{6}\.(jpg|png)', content, re.MULTILINE)
+                if image_path is None:
+                    raise Exception('Cannot find any image from ' + html_file.group())
+                image_paths.append(os.path.join(image_dir, image_path.group()))
+    return image_paths
+
+
 def get_image_paths():
     temp_dir = os.path.join(os.getcwd(), MOX2PDF_TEMP_DIR)
     html_dir = os.path.join(temp_dir, 'html')
@@ -41,12 +58,21 @@ def get_image_paths():
     else:
         print('No cover image detected.')
 
+    if os.path.exists(os.path.join(image_dir, 'createby.jpg')):
+        image_paths.append(os.path.join(image_dir, 'createby.jpg'))
+    elif os.path.exists(os.path.join(image_dir, 'createby.png')):
+        image_paths.append(os.path.join(image_dir, 'createby.png'))
+    else:
+        print('No createby image detected.')
+
     image_dict = {}
     glob_pattern = ''
     if os.path.exists(os.path.join(html_dir, '1.html')):
         glob_pattern = '[0-9]*.html'
     elif os.path.exists(os.path.join(html_dir, '1.xhtml')):
         glob_pattern = '[0-9]*.xhtml'
+    elif os.path.exists(os.path.join(temp_dir, 'vol.opf')):
+        return get_image_paths_by_opf(temp_dir, html_dir, image_dir, image_paths)
     else:
         raise Exception('Cannot find first HTML file for indexing images: {}'.format(os.path.join(html_dir, '1.html')))
 
@@ -58,13 +84,6 @@ def get_image_paths():
     for index in sorted(image_dict):
         image_paths.append(os.path.join(image_dir, image_dict[index]))
     
-    if os.path.exists(os.path.join(image_dir, 'createby.jpg')):
-        image_paths.append(os.path.join(image_dir, 'createby.jpg'))
-    elif os.path.exists(os.path.join(image_dir, 'createby.png')):
-        image_paths.append(os.path.join(image_dir, 'createby.png'))
-    else:
-        print('No createby image detected.')
-
     return image_paths
 
 
